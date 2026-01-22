@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/xulei1234/x-agent/module/config"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/spf13/viper"
@@ -20,12 +23,7 @@ var (
 )
 
 func Execute() error {
-	err := newRootCmd().Execute()
-	if err != nil {
-		// 确保命令错误至少能在终端看到（即使日志初始化失败）
-		_, _ = fmt.Fprintf(os.Stderr, "command failed: %v\n", err)
-	}
-	return err
+	return newRootCmd().Execute()
 }
 
 func newRootCmd() *cobra.Command {
@@ -34,8 +32,7 @@ func newRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// version 不应依赖配置文件存在
-			if cmd.Name() == "version" || cmd.CommandPath() == "x-agent version" {
+			if cmd.Name() == "version" {
 				return nil
 			}
 			initOnce.Do(func() { initErr = initConfigAndLogging() })
@@ -54,27 +51,32 @@ func newRootCmd() *cobra.Command {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfigAndLogging() error {
-	// 初始化日志
+	// 1) 注入 viper 預設值 + 環境變數（先預設，後覆寫）
+	config.SetupDefaultViper()
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// 2) 配置檔：可選（不存在不視為錯）
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+		if err := viper.ReadInConfig(); err != nil {
+			// 若檔案不存在就忽略，讓預設值生效；其它錯誤才返回
+			var configFileNotFoundError viper.ConfigFileNotFoundError
+			if !errors.As(err, &configFileNotFoundError) {
+				return fmt.Errorf("read config: %w", err)
+			}
+		}
+	}
+
+	// 3) 日誌：同時輸出到終端 \+ 文件（使用 viper 取到的值：配置檔/環境/預設）
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 
 	lvl, err := logrus.ParseLevel(loglevel)
 	if err != nil {
 		return fmt.Errorf("invalid loglevel %q: %w", loglevel, err)
 	}
+
 	logrus.SetLevel(lvl)
-
-	// 配置文件
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// 讀取配置
-	if err = viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("read config: error %w", err)
-	}
-
 	// 日誌輸出：若沒配置路徑，兜底到 stdout，避免寫入空文件名
 	logPath := viper.GetString("LogFile.Path")
 	if logPath == "" {
@@ -95,8 +97,6 @@ func initConfigAndLogging() error {
 		})
 	}
 	// 設置日誌級別
-	logrus.WithField("level", lvl).Infoln("初始化设置当前日志输出级别")
 	logrus.WithField("config", viper.ConfigFileUsed()).Infof("Using config file")
-	logrus.WithField("log", viper.GetString("LogFile.Path")).Info("Using log file")
 	return nil
 }

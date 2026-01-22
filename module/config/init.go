@@ -4,13 +4,7 @@ import "github.com/spf13/viper"
 
 func SetupDefaultViper() {
 	viper.SetDefault("Channel", []string{
-		"47.94.106.61:5050",
-		"10.1.64.11:5050",
-		"10.1.64.12:5050",
-		"10.32.214.2:5050",
-		"10.32.214.3:5050",
-		"10.254.144.94:5050",
-		"10.254.144.95:5050",
+		"127.0.0.1:5050",
 	})
 	viper.SetDefault("Channel.Port", "5050")
 	viper.SetDefault("IDC.Zone", "")

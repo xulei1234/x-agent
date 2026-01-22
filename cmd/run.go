@@ -20,7 +20,11 @@ func newRunCmd() *cobra.Command {
 		Short: "運行 x-agent 進程",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd)
+			if err := run(cmd); err != nil {
+				cmd.PrintErrf("run failed: %v\n", err)
+				return err
+			}
+			return nil
 		},
 	}
 }
@@ -34,7 +38,9 @@ func run(cmd *cobra.Command) error {
 	ctx, stop := notifyContext(context.Background())
 	defer stop()
 
-	server.SetUp()
+	if err := server.SetUp(); err != nil {
+		return err
+	}
 
 	if err := server.Run(ctx); err != nil {
 		cmd.PrintErrf("server run failed: %v\n", err)

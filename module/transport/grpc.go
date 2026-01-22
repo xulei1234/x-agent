@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/xulei1234/x-agent/module/common"
@@ -83,7 +84,7 @@ func recordConnTargetAndNotifyIfChanged(target string) {
 	lastConnTarget.Store(target)
 }
 
-func (g *GrpcMgr) ConnectToChannel() {
+func (g *GrpcMgr) ConnectToChannel() error {
 	clientv3.SetLogger(&logger{})
 
 	tlsCred, err := credentials.NewClientTLSFromFile(
@@ -92,20 +93,24 @@ func (g *GrpcMgr) ConnectToChannel() {
 	)
 
 	if err != nil {
-		logrus.Fatalf("ConnectToChannel: fail to NewClientTLSFromFile (%v) ", err.Error())
+		logrus.WithError(err).Error("ConnectToChannel: fail to NewClientTLSFromFile")
+		return err
 	}
-	logrus.Infof("ConnectToChannel: success to NewClientTLSFromFile (%v)", tlsCred.Info())
+
+	//logrus.Infof("ConnectToChannel: success to NewClientTLSFromFile", tlsCred.Info())
 
 	endpoint := viper.GetStringSlice("Channel")
 	common.Shuffle(endpoint)
 
 	b, err := ioutil.ReadFile(viper.GetString("TlsConf.Certfile"))
 	if err != nil {
-		logrus.Fatalf("ConnectToChannel: failed to read  TlsConf.Certfile")
+		logrus.WithError(err).Error("ConnectToChannel: failed to read  TlsConf.Certfile")
+		return err
 	}
 	cp := x509.NewCertPool()
 	if !cp.AppendCertsFromPEM(b) {
-		logrus.Fatalf("ConnectToChannel: failed to append certificates")
+		logrus.WithError(err).Error("ConnectToChannel: failed to append certificates")
+		return errors.New("failed to append certificates")
 	}
 
 	g.client3, err = clientv3.New(clientv3.Config{
@@ -121,7 +126,8 @@ func (g *GrpcMgr) ConnectToChannel() {
 		},
 	})
 	if err != nil {
-		logrus.Fatalf("ConnectToChannel: fail to new client v3(%s)", err.Error())
+		logrus.WithError(err).Error("ConnectToChannel: fail to new client v3(%s)", err.Error())
+		return err
 	}
 
 	conn := g.client3.ActiveConnection()
@@ -130,9 +136,13 @@ func (g *GrpcMgr) ConnectToChannel() {
 		logrus.WithField("channel", target).Info("ConnectToChannel: success to new client v3")
 		// 记录并在 target 变化时触发 AddressChangeBuffer
 		recordConnTargetAndNotifyIfChanged(target)
+	} else {
+		logrus.Warning("ConnectToChannel: conn is nil after new client v3")
+		return errors.New("ConnectToChannel: conn is nil after new client v3")
 	}
 
 	g.client = xps.NewXServiceClient(g.client3.ActiveConnection())
+	return nil
 }
 
 func (g *GrpcMgr) GetCommandStreamClient(ctx context.Context, body *xps.Empty) (xps.XService_CommandClient, error) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"github.com/xulei1234/x-agent/module/config"
 	"github.com/xulei1234/x-agent/module/transport"
 	"os"
 	"os/signal"
@@ -21,9 +20,11 @@ func Check() error {
 	return nil
 }
 
-func SetUp() {
-	config.SetupDefaultViper()
-	transport.SetUp()
+func SetUp() error {
+	if err := transport.SetUp(); err != nil {
+		return fmt.Errorf("connect channel failed: %w", err)
+	}
+	return nil
 }
 
 func Run(ctx context.Context) error {

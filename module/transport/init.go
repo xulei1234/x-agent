@@ -40,8 +40,8 @@ func init() {
 
 }
 
-func SetUp() {
-	gMgr.ConnectToChannel()
+func SetUp() error {
+	return gMgr.ConnectToChannel()
 }
 
 func Run() error {
