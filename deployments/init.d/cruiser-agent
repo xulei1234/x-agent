@@ -1,0 +1,70 @@
+#!/bin/bash
+#chkconfig: 345 95 95
+
+DAEMON="/opt/x-agent/x-agent run"
+NAME="x-agent"
+LOGFILE=/var/log/$NAME.log
+cd /opt/x-agent/
+
+cruiser_start()
+{
+    PID=`ps -ef |grep $NAME |grep /opt/x-agent|grep -v "grep" |awk '{print $2}'`
+    if [ "$PID" ]; then
+        echo "Running, the PID is $PID"
+        return 0
+    else
+        echo -n "Starting daemon: $NAME"
+        nohup $DAEMON > $LOGFILE 2>&1 &
+        retval=$?
+        echo " done"
+        return $retval
+    fi
+}
+
+cruiser_stop()
+{
+    echo "Stopping daemon: $NAME"
+    PID=`ps -ef|grep $NAME|grep /opt/x-agent|grep -v grep|awk '{print $2}'`
+    if [ -n "$PID" ]; then
+       kill -9 $PID
+    fi
+    echo "done"
+}
+
+
+cruiser_status()
+{
+        printf "%-50s" "Checking $NAME..."
+        PID=`ps -ef |grep $NAME |grep /opt/x-agent|grep -v grep | awk '{print $2}'`
+        echo $PID
+        if [ "$PID" ]; then
+            echo "Running, the PID is $PID"
+            return 0
+        else
+            echo "NO Running"
+            return 1
+        fi
+}
+
+
+case "$1" in
+  start)
+    cruiser_start
+    ;;
+  stop)
+    cruiser_stop
+    ;;
+  status)
+    cruiser_status
+    ;;
+  restart)
+    $0 stop
+    sleep 3
+    $0 start
+    ;;
+  *)
+    echo "Usage: $1 {start|stop|status|restart}"
+    exit 1
+esac
+
+exit 0

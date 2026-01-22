@@ -1,0 +1,45 @@
+{
+  "Channel":[
+    "127.0.0.1:5050"
+  ],
+
+  "FileServer":  [
+    "127.0.0.1:80"
+  ],
+  "IDC":{
+    "Zone": "",
+    "Region": ""
+  },
+  "TlsConf":{
+    "Certfile":"./certs/server.pem",
+    "SrvName": "cruiser-channel-grpc"
+  },
+  "Resourcelimit": {
+    "Cpu": 5,
+    "Memory": "32M"
+  },
+  "IP": "",
+  "HostName": "",
+  "UUID": "",
+  "LogOnceCount": 50000,
+  "IntervalTick": {
+    "HeartBeat": "10s",
+    "ReportOS": "10s",
+    "ReportAgent": "10s"
+   },
+  "Timeout": {
+    "CmdRun": "120s",
+    "HeartBeat":"2s",
+    "Report": "2s",
+    "Connect": "4s"
+  },
+  "RuntimeEnv": {
+      "PATH":":/opt/x-agent/libexec:/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  },
+  "LogFile": {
+    "Path": "/opt/x-agent/log/x-agent.log",
+    "MaxSize": 5000,
+    "MaxBackups": 3,
+    "MaxAge": 30
+  }
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=x-agent
+Documentation=http://git.dz11.com/ops/devops/x-agent
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+KillMode=process
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+RuntimeDirectoryMode=0750
+WorkingDirectory=/opt/x-agent/
+ExecStart=/opt/x-agent/x-agent run
+
+[Install]
+WantedBy=multi-user.target
